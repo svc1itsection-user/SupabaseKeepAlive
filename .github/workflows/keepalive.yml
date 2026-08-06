@@ -12,8 +12,12 @@ jobs:
     steps:
       - name: Ping Supabase REST API
         run: |
+          # Remove any accidental trailing slash from SUPABASE_URL
+          RAW_URL="${{ secrets.SUPABASE_URL }}"
+          CLEAN_URL="${RAW_URL%/}"
+
           # Send GET request and capture the HTTP status code
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${CLEAN_URL}/rest/v1/" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
 
