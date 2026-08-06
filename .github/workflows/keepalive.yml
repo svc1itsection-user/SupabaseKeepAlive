@@ -4,7 +4,7 @@ on:
   schedule:
     # Runs every 3 days at 00:00 UTC
     - cron: '0 0 */3 * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch: # Allows manual triggers from the GitHub Actions UI
 
 jobs:
   ping-and-keep-active:
@@ -12,9 +12,20 @@ jobs:
     steps:
       - name: Ping Supabase REST API
         run: |
-          curl -s -i -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+          # Send GET request and capture the HTTP status code
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.SUPABASE_URL }}/rest/v1/" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+
+          echo "Status: $STATUS_CODE"
+
+          # Verify response status
+          if [ "$STATUS_CODE" -eq 200 ]; then
+            echo "SUCCESS: Supabase project pinged successfully!"
+          else
+            echo "ERROR: Supabase ping failed with status code $STATUS_CODE"
+            exit 1
+          fi
 
       - name: Checkout repository
         uses: actions/checkout@v4
