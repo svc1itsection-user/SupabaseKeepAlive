@@ -2,12 +2,12 @@ name: Supabase Keep Alive
 
 on:
   schedule:
-    # Runs every 3 days at 00:00 UTC to beat Supabase's 7-day inactivity pause
+    # Runs every 3 days at 00:00 UTC to keep Supabase active
     - cron: '0 0 */3 * *'
-  workflow_dispatch: # Allows manual triggers from the Actions tab
+  workflow_dispatch: # Allows manual trigger from GitHub UI
 
 permissions:
-  contents: write # Required for auto-committing to prevent GitHub's 60-day pause
+  contents: write # Enables automatic commit permission
 
 jobs:
   ping-and-keep-active:
@@ -15,24 +15,9 @@ jobs:
     steps:
       - name: Ping Supabase REST API
         run: |
-          # Strip trailing slashes from SUPABASE_URL if present
-          RAW_URL="${{ secrets.SUPABASE_URL }}"
-          CLEAN_URL="${RAW_URL%/}"
-
-          # Send GET request and capture HTTP response status code
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${CLEAN_URL}/rest/v1/" \
+          curl -s -i -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
-
-          echo "Supabase Status Code: $STATUS_CODE"
-
-          # Fail workflow step if status is not 200 OK
-          if [ "$STATUS_CODE" -eq 200 ]; then
-            echo "SUCCESS: Supabase project pinged successfully!"
-          else
-            echo "ERROR: Ping failed with status code $STATUS_CODE"
-            exit 1
-          fi
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,10 +26,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Update timestamp
           date > keepalive.txt
-          
           git add keepalive.txt
           git commit -m "Chore: Keep-alive heartbeat [skip ci]" || exit 0
           git push
